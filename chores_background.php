@@ -1,0 +1,127 @@
+<?php
+	/******************************************************************************
+	 * MAIN! chore_backgound:
+	 * 	Cause every good app needs a main.
+	 *	This manages a chores text file and then sends a message to a given 
+	 *	person that is part of the text file.
+	 *
+	 *	chores_file.txt format:
+	 *		<week>
+	 *		<chore_1>:<name_1>:<email_1>:<last_poked_hour_1>:<last_poked_day_1>
+	 *		<chore_2>:<name_2>:<email_2>:<last_poked_hour_2>:<last_poked_day_2>
+	 *		...
+	 *		<chore_n>:<name_n>:<email_n>:<last_poked_hour_n>:<last_poked_day_n>
+	 ******************************************************************************/
+	function main() {
+		$date_rep = "W";
+		$chores_list = "chores_list.txt";
+
+		$chores = fopen($chores_list, "r"); 
+		$next_rotation = fgets($chores);
+		fclose($chores);
+
+		$rotate = chores_rotate($next_rotation, $chores_list, $date_rep);
+
+		if ($_SERVER['REQUEST_METHOD'] == "POST") {
+			if ($_GET['action'] == "poke") {
+				poke_roommate($_GET["person"], $chores_list, $date_rep);
+			}
+		}
+		header("Location: http://web.engr.oregonstate.edu/~smithcr/chores_app/chores.php");
+	}
+
+	/******************************************************************************
+	 * poke_roommate($poke_recip, $chores_file, $date_rep)
+	 * 	$poke_recipient:should be a string of the name of the person that will 
+	 *					recieve the message
+	 *	$chores_file:	the file path that contains the chores
+	 *	$date_rep:		the string that the date should be represented as
+	 *
+	 *	Description:	This function take in a name and a formatted chore 
+	 *					file, and the date representaion. It takes the name and 
+	 *					looks through the file to find the name then it will send a
+	 *					message to the name's email in the file.
+	 ******************************************************************************/
+	function poke_roommate($poke_recip, $chores_file, $date_rep) {
+		$chores = fopen($chores_file, "r"); 
+		$week = fgets($chores);
+		if ($rotate) {
+			$newFile = date($date_rep) . "\n";
+		} else {
+			$newFile = $week . "\n";
+		}
+		while (($line = fgets($chores)) !== false) {
+			list($chore, $person, $number, $last_poked_day, $last_poked_hour) = explode(":", $line);
+			if ($poke_recip == $person && ($last_poked_hour + 3 <= (date("G")) || $last_poked_day < date("j")) ) {
+				mail ($number , "CHORE REMINDER" , "please do your $chore");
+				$newFile = $newFile . $chore . ":" . $person . ":" . $number . ":" . date("j:G") ."\n";
+			 } else {
+			 	$newFile = $newFile . $chore. ":" . $person . ":" . $number . ":" . $last_poked_day . ":" . $last_poked_hour ."";
+			 }
+		}
+		fclose($chores);
+		$chores = fopen($chores_list, "w");
+		fwrite($chores, $newFile);
+		fclose($chores);
+	}
+
+	/******************************************************************************
+	 * chores_rotate($now, $next, $difference, $chores_list, $date_rep) {
+	 *	$next:			The next date to compare it to
+	 *	$difference:	This is the amount of difference between the weeks
+	 *	$chores_list:	The Path to the formatted text file
+	 *	$date_rep:		The way that the page is representeing the date of the 
+	 *					turnover
+	 *
+	 *	Description:	This function takes the file and checks if it needs to 
+	 *					rotate the chores based on the difference and the date
+	 *					representation
+	 ******************************************************************************/
+	chores_rotate($next, $difference, $chores_list, $date_rep) {
+		$now = date($date_rep);
+		if($now != 0) {
+			if($now >= $next + $difference) {
+				for ($i = 0; $i < ($now - ($next+$difference)); $i += $difference) {
+					rotate($chores_list);
+				}
+				return True;
+			} else {
+				return False;
+			}
+		} else if ($next != 0) {
+			for ($i = 52; $i > ($next+$difference); $i -= $difference) {
+				rotate($chores_list);
+			}
+			return True;
+		} else {
+			return False;
+		}
+	} 
+
+	/******************************************************************************
+	 * function rotate($chores_list)
+	 *	$chores_list:	The path to a formatted chore file
+	 *
+	 *	Description:	This rotates the file upward, taking the top name and 
+	 *					moving it to the bottom and moving the rest of the 
+	 *					names up.
+	 ******************************************************************************/
+	function rotate($chores_list) {
+		$chores = fopen($chores_list, "r");
+		$newFile = date($date_rep) . "\n";
+		$first_person = fgets($chores); 	// save first guy information and then rotate the information up
+		list($fp_chore, $fp_person, $fp_number, $fp_last_poked_day, $fp_last_poked_hour) = explode(":", $first_person);
+		$newFile = $newFile . $fp_chore. ":";
+		while (($line = fgets($chores)) !== false) {
+			list($chore, $person, $number, $last_poked_day, $last_poked_hour) = explode(":", $line);
+			$newFile = $newFile . $person . ":" . $number . ":" . $last_poked_hour . "\n" . $chore . ":";
+		}
+		$newFile = $newFile . ":" . $fp_person . ":" . $fp_number . ":" . $fp_last_poked_day . ":" . $fp_last_poked_hour
+		fclose($chores);
+		fopen($chores_list, "w");
+		fwrite($chores, $newFile);
+	}
+
+	main();
+
+?>
