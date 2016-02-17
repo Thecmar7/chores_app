@@ -1,3 +1,5 @@
+<?php include_once("analyticstracking.php"); ?>
+
 <!DOCTYPE html>
 <html>
 <head>
