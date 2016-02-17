@@ -31,16 +31,16 @@
 
 		// rotate
 		//if ($next_rotation_small < date($small_rep) || $next_rotation_large < date($larg_rep)) {
-		//	$rotate = chores_rotate($next_rotation_small, $next_rotation_large, $chores_list, $date_rep);
+		//	$rotate = chores_rotate($next_rotation_small, $next_rotation_large, $chores_list, $small_rep, $large_rep);
 		//}
 
 		rotate($chores_list, $small_rep, $large_rep);
 
-		//if ($_SERVER['REQUEST_METHOD'] == "POST") {
-		//	if ($_GET['action'] == "poke") {
-		//		poke_roommate($_GET["person"], $chores_list, $date_rep);
-		//	}
-		//}
+		if ($_SERVER['REQUEST_METHOD'] == "POST") {
+			if ($_GET['action'] == "poke") {
+				poke_roommate($_GET["person"], $chores_list, $rep_small, $rep_large);
+			}
+		}
 		header("Location: http://web.engr.oregonstate.edu/~smithcr/chores_app/chores.php");
 	}
 
@@ -56,14 +56,10 @@
 	 *					looks through the file to find the name then it will send a
 	 *					message to the name's email in the file.
 	 ******************************************************************************/
-	function poke_roommate($poke_recip, $chores_file, $date_rep) {
-		$chores = fopen($chores_file, "r"); 
-		$week = fgets($chores);
-		if ($rotate) {
-			$newFile = date($date_rep) . "\n";
-		} else {
-			$newFile = $week . "\n";
-		}
+	function poke_roommate($poke_recip, $chores_file, $rep_small, $rep_large) {
+		$chores = fopen($chores_file, "r"); 	
+		$newFile = fgets($chores);
+		
 		while (($line = fgets($chores)) !== false) {
 			list($chore, $person, $number, $last_poked_day, $last_poked_hour) = explode(":", $line);
 			if ($poke_recip == $person && ($last_poked_hour + 3 <= (date("G")) || $last_poked_day < date("j"))) {
@@ -92,13 +88,14 @@
 	 *					rotate the chores based on the difference and the date
 	 *					representation
 	 ******************************************************************************/
-	function chores_rotate($next_small, $next_large, $difference, $chores_list, $date_rep_small, $date_rep_large) {
+	function chores_rotate($next_small, $next_large, $chores_list, $date_rep_small, $date_rep_large) {
 		
-		// small and large
+		// small and large/date and the turnover
 		$now_small = date($date_rep_small);
 		$now_large = date($date_rep_large);
 
 
+		
 
 		if($now != 0) {
 			if($now >= $next + $difference) {
@@ -147,8 +144,8 @@
 			list($chore, $person, $number, $last_poked_day, $last_poked_hour) = explode(":", $line);
 			$newFile = $newFile . $person . ":" . $number . ":" . $last_poked_day . ":" . $last_poked_hour . $chore . ":";
 		}
-		$newFile = $newFile . "" . $fp_person . ":" . $fp_number . ":" . $fp_last_poked_day . ":" . $fp_last_poked_hour;
-		
+		$newFile = $newFile . $fp_person . ":" . $fp_number . ":" . $fp_last_poked_day . ":" . $fp_last_poked_hour;
+		fclose($chores);
 		$chores = fopen($chores_list, "w");
 		fwrite($chores, $newFile);
 		fclose($chores);
